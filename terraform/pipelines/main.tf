@@ -27,8 +27,8 @@ module "cluster_auth" {
   }]
 
   users = [{
-    userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/damien"
-    username = "damien"
+    userarn  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/${var.eks_admin_iam_username}"
+    username = var.eks_admin_iam_username
     groups   = ["system:masters"]
   }]
 }
@@ -43,7 +43,7 @@ module "awsome_fastapi_pipeline" {
   s3_bucket_arn  = module.default_bucket.bucket_arn
 
   repo_name     = "awsome-fastapi"
-  repository_id = "The-DevSec-Blueprint/awsome-fastapi"
+  repository_id = "${var.github_username}/awsome-fastapi"
   branch_name   = "main"
 
   eks_cluster_name = var.eks_cluster_name

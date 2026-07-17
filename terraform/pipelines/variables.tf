@@ -18,3 +18,15 @@ variable "region" {
 
 variable "SNYK_TOKEN" {}
 variable "SNYK_ORG_ID" {}
+
+variable "eks_admin_iam_username" {
+  type        = string
+  description = "IAM username to grant cluster-admin access"
+  default     = "iamadmin-dev"
+}
+
+variable "github_username" {
+  type        = string
+  description = "GitHub username or organization that owns the awsome-fastapi repository"
+  default     = "AlexJelani"
+}
