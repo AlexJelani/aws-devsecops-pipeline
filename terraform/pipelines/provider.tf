@@ -1,15 +1,18 @@
 provider "aws" {
   region = var.region
+  access_key = var.aws_access_key_id
+  secret_key = var.aws_secret_access_key
+  token      = var.aws_session_token
 }
 
 provider "random" {}
 
 terraform {
   cloud {
-    organization = "DSB"
+    organization = "alexander-tech-inc"
 
     workspaces {
-      name = "aws-devsecops-pipelines"
+      name = "dsb-aws-devsecops-pipelines"
     }
   }
 
