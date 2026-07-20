@@ -17,6 +17,12 @@ variable "tags" {
   default     = {}
 }
 
+variable "kubernetes_version" {
+  description = "Kubernetes version for the EKS cluster"
+  type        = string
+  default     = "1.36"
+}
+
 # Node Group Configuration
 variable "node_group_min_size" {
   description = "Minimum size of the node group"

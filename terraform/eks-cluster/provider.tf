@@ -4,13 +4,3 @@ provider "aws" {
   secret_key = var.aws_secret_access_key != "" ? var.aws_secret_access_key : null
   profile    = (var.aws_access_key_id == "" || var.aws_secret_access_key == "") && var.aws_profile != "" ? var.aws_profile : null
 }
-
-terraform {
-  cloud {
-    organization = "alexander-tech-inc"
-
-    workspaces {
-      name = "dsb-aws-devsecops-eks-cluster"
-    }
-  }
-}
