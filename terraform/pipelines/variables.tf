@@ -28,12 +28,6 @@ variable "aws_secret_access_key" {
   default     = ""
 }
 
-variable "aws_session_token" {
-  type        = string
-  description = "AWS session token for Terraform Cloud runs"
-  default     = ""
-}
-
 variable "SNYK_TOKEN" {}
 variable "SNYK_ORG_ID" {}
 

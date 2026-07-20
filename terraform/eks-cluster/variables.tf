@@ -21,9 +21,3 @@ variable "aws_secret_access_key" {
   description = "AWS secret access key for Terraform Cloud runs"
   default     = ""
 }
-
-variable "aws_session_token" {
-  type        = string
-  description = "AWS session token for Terraform Cloud runs"
-  default     = ""
-}
