@@ -9,3 +9,15 @@ variable "region" {
   description = "AWS Region"
   default     = "us-east-1"
 }
+
+variable "aws_access_key_id" {
+  type        = string
+  description = "AWS access key ID for Terraform Cloud runs"
+  default     = ""
+}
+
+variable "aws_secret_access_key" {
+  type        = string
+  description = "AWS secret access key for Terraform Cloud runs"
+  default     = ""
+}
