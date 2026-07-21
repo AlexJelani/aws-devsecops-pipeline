@@ -293,6 +293,7 @@ resource "aws_codepipeline" "pipeline" {
       provider        = "CodeBuild"
       version         = "1"
       input_artifacts = ["SourceArtifact"]
+      output_artifacts = ["SnykScanArtifact"]
       run_order       = 3
 
       configuration = {
@@ -508,13 +509,12 @@ resource "aws_codebuild_project" "static_analysis_project" {
   }
 
   source {
-    type      = "NO_SOURCE"
+    type      = "CODEPIPELINE"
     buildspec = file("${path.module}/buildspecs/sastscanning.yml")
   }
 
   artifacts {
-    type     = "S3"
-    location = var.s3_bucket_name
+    type = "CODEPIPELINE"
   }
 
 }
