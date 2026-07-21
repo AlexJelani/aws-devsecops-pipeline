@@ -1,6 +1,9 @@
 # Mac Useless Files
 .DS_Store
 
+# Local video script notes
+VIDEO_TUTORIAL_SCRIPT.md
+
 # Local .terraform directories
 **/.terraform/*
 

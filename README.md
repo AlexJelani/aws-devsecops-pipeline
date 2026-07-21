@@ -1,109 +1,228 @@
-# AWS DevSecOps Pipeline - Terraform
+# Cloud Native DevSecOps Pipeline on AWS
 
-![License](https://img.shields.io/github/license/devsecblueprint/aws-devsecops-pipeline?logo=license&style=for-the-badge)
-![Terraform Cloud](https://img.shields.io/badge/Terraform-Registry-purple?logo=terraform&style=for-the-badge)
-![GitHub Issues](https://img.shields.io/github/issues/devsecblueprint/aws-devsecops-pipeline?logo=github&style=for-the-badge)
-![GitHub Forks](https://img.shields.io/github/forks/devsecblueprint/aws-devsecops-pipeline?logo=github&style=for-the-badge)
-![GitHub Stars](https://img.shields.io/github/stars/devsecblueprint/aws-devsecops-pipeline?logo=github&style=for-the-badge)
-![GitHub Last Commit](https://img.shields.io/github/last-commit/devsecblueprint/aws-devsecops-pipeline?logo=github&style=for-the-badge)
-![CI Status](https://img.shields.io/github/actions/workflow/status/devsecblueprint/aws-devsecops-pipeline/main.yml?style=for-the-badge&logo=github)
+Portfolio project: end-to-end secure CI/CD on AWS using Terraform Cloud, GitHub Actions, CodePipeline, CodeBuild, Snyk, Trivy, and EKS.
 
-## Overview
+## Project Summary
 
-This project provides an automated DevSecOps pipeline for deploying infrastructure using Terraform, AWS, and Snyk for vulnerability scanning. The pipeline is designed to streamline infrastructure management while ensuring security through continuous integration and deployment practices.
+This project automates:
 
-## Requirements
+1. Source from GitHub.
+2. Infrastructure provisioning with Terraform Cloud.
+3. Build, test, and security scans in CodeBuild.
+4. Image and deployment flow through CodePipeline.
+5. Runtime deployment to Amazon EKS behind a LoadBalancer.
 
-- **Terraform** (latest stable version)
-- **Terraform Cloud** account
-- **Snyk** account for vulnerability scanning
-- **AWS** account with appropriate permissions
+## What I Accomplished
 
-## Setup Instructions
+1. Provisioned EKS cluster and managed node group in us-east-1.
+2. Integrated Terraform Cloud workspaces with AWS OIDC role-based auth.
+3. Deployed AWS pipeline resources (CodePipeline, CodeBuild, S3, connection resources).
+4. Completed pending GitHub connection activation in AWS Console.
+5. Triggered successful pipeline execution and deployed awsome-fastapi to EKS.
+6. Verified deployment health with kubectl:
+  - 2/2 pods running
+  - LoadBalancer service provisioned
+7. Improved static-analysis build behavior for demo use:
+  - Snyk findings remain visible
+  - report artifacts exported (JSON + SARIF)
+  - severity summary printed in logs
+  - scan step configured non-blocking for tutorial deployment flow
 
-### 1. **Terraform Cloud Setup**
+## Architecture
 
-- Create an account on Terraform Cloud and generate an API key.
-- Store the API key as a token on your local machine.
-- In your GitHub repository settings, add the API token for Terraform Cloud.
-
-### 2. **Configure Terraform**
-
-- Clone or download this repository.
-- Update the `terraform-apply.yml` file with your organization name.
-- Within `terraform/eks-cluster` and `terraform/pipelines`, carryo out the follwowing:
-
-  - Modify the `provider.tf` file to include your correct Terraform Cloud workspace name (do not use "DSB").
-  - Run the following commands to ensure things work properly:
-
-  ```bash
-  terraform init
-  terraform plan
-  ```
-
-### 3. **Configure Snyk**
-
-- Create an account on [Snyk](https://www.snyk.io/) and generate an API Token.
-- Follow the Snyk CLI [documentation](https://docs.snyk.io/snyk-cli/configure-the-snyk-cli) to configure your CLI.
-- Save your Snyk organization ID as an environment variable in Terraform Cloud as a protected `Workspace Variable`:
-
-### 4. **Environment Variables**
-
-Set up the following environment variables within your Terraform Cloud workspace or locally:
-
-- `SNYK_TOKEN`: Your Snyk API token.
-- `SNYK_ORG_ID`: Your Snyk organization ID.
-
-### 5. **Terraform Initialization and Apply**
-
-Run the following commands in both the `eks-cluster` and `pipelines` folder to initialize Terraform, plan the deployment, and apply the changes:
-
-```bash
-terraform apply
+```mermaid
+flowchart LR
+  A[GitHub Repo] --> B[GitHub Actions workflow_dispatch]
+  B --> C[Terraform Cloud EKS Workspace]
+  B --> D[Terraform Cloud Pipelines Workspace]
+  D --> E[CodePipeline awsome-fastapi]
+  E --> F[CodeBuild Build/Test/Scan]
+  F --> G[Snyk + Trivy Results]
+  E --> H[Deploy Stage]
+  H --> I[EKS Cluster]
+  I --> J[LoadBalancer Service]
 ```
 
-### 6. **Verify AWS Changes**
+## Prerequisites
 
-Log in to the AWS Console and verify the changes made by Terraform:
+1. AWS account with IAM permissions for IAM, EKS, CodePipeline, CodeBuild, S3, ELB.
+2. GitHub account.
+3. Terraform Cloud account.
+4. Snyk account (token + org id).
+5. Local tools:
+  - Terraform CLI
+  - Git
+  - aws CLI
+  - kubectl
 
-- Navigate to the AWS [Codesuite Settings](https://us-east-1.console.aws.amazon.com/codesuite/settings/connections?region=us-east-1&connections-meta=eyJmIjp7InRleHQiOiIifSwicyI6e30sIm4iOjIwLCJpIjowfQ#).
-- Update the pending connection to make it active.
+## Repositories
 
-### 7. **Next Steps**
+1. Pipeline repo: https://github.com/devsecblueprint/aws-devsecops-pipeline
+2. App repo: https://github.com/devsecblueprint/awsome-fastapi
 
-Once the pipeline is set up and verified, you can move to the next codebase for further configurations or deployments.
+## Step-by-Step Walkthrough
 
-## Modules
+### Phase 1: Snyk Setup
 
-The `modules` directory contains reusable Terraform modules designed for different parts of the infrastructure. Below is a brief overview of each module:
+1. Create Snyk account.
+2. Capture:
+  - SNYK_TOKEN
+  - SNYK_ORG_ID
 
-### 1. **S3 Module**
+### Phase 2: Terraform Cloud Setup
 
-This module is responsible for provisioning and managing AWS S3 buckets. It defines the main configurations for creating S3 buckets, specifying variables such as bucket name and region.
+1. Create Terraform Cloud organization.
+2. Create project.
+3. Create CLI-driven workspaces:
+  - dsb-aws-devsecops-eks-cluster
+  - dsb-aws-devsecops-pipelines
+4. Create Terraform Cloud user token for GitHub secret.
 
-- **Files**:
-  - `main.tf`: S3 bucket creation and configuration.
-  - `variables.tf`: Variables such as bucket name, region, etc.
-  - `outputs.tf`: Outputs for the S3 bucket, such as the bucket name or ARN.
+### Phase 3: AWS OIDC for Terraform Cloud
 
-### 2. **CodePipeline Module**
+1. IAM Identity Provider:
+  - URL: https://app.terraform.io
+  - Audience: aws.workload.identity
+2. IAM role for Terraform Cloud runs.
+3. Trust policy `sub` must match your real Terraform org.
 
-The CodePipeline module automates the setup of an AWS CodePipeline for continuous integration and deployment. It includes configuration for stages, actions, and integration with other AWS services like ECR and Secrets Manager.
+### Phase 4: Terraform Cloud Variable Set
 
-- **Files**:
-  - `main.tf`: Defines the pipeline, stages, and actions.
-  - `ecr.tf`: Configures ECR (Elastic Container Registry) to store Docker images.
-  - `buildspecs`: Contains build instructions for CodeBuild.
-  - `secrets.tf`: Configures secrets management for the pipeline.
-  - `configmap.tf`: Configures Kubernetes ConfigMaps for integration with EKS (if applicable).
-  - `variables.tf`: Defines variables specific to the pipeline.
-  - `provider.tf`: Specifies AWS provider details.
+Add environment variables (apply to both workspaces):
 
-### 3. **EKS Module**
+1. TFC_AWS_PROVIDER_AUTH=true
+2. TFC_AWS_RUN_ROLE_ARN=<your role arn>
 
-This module provisions an EKS (Elastic Kubernetes Service) cluster, including the configuration for node groups and cluster resources.
+### Phase 5: GitHub Secret
 
-- **Files**:
-  - `main.tf`: Defines the EKS cluster, node groups, and related resources.
-  - `variables.tf`: Variables such as cluster name, region, and node configurations.
-  - `outputs.tf`: Outputs like the EKS cluster name or endpoint.
+In pipeline repo secrets:
+
+1. TF_API_TOKEN=<terraform cloud api token>
+
+### Phase 6: Terraform Cloud Workspace Secrets
+
+In workspace dsb-aws-devsecops-pipelines:
+
+1. SNYK_TOKEN (sensitive)
+2. SNYK_ORG_ID (sensitive)
+
+### Phase 7: Provision Infrastructure
+
+1. Run `.github/workflows/main.yml` manually from GitHub Actions.
+2. Confirm both jobs succeed:
+  - terraform-apply-eks
+  - terraform-apply-pipelines
+
+### Phase 8: Activate Connection
+
+1. AWS Console -> CodePipeline -> Settings -> Connections
+2. Open pending GitHub connection.
+3. Update pending connection and authorize GitHub app.
+4. Confirm status is Available.
+
+### Phase 9: Deploy the App
+
+1. Open CodePipeline `awsome-fastapi`.
+2. Click Release change.
+3. Monitor stages to success.
+
+### Phase 10: Verify Runtime
+
+```bash
+aws eks update-kubeconfig --name dsb-devsecops-cluster --region us-east-1 --profile <your-profile>
+kubectl get deploy,svc,pods -A | grep -E 'awsome-fastapi|NAMESPACE'
+```
+
+Expected:
+
+1. deployment.apps/awsome-fastapi available
+2. service/awsome-fastapi type LoadBalancer with external DNS
+3. pods running
+
+## Security Scanning Notes
+
+1. Snyk reports are exported as build artifacts:
+  - reports/snyk-deps.json
+  - reports/snyk-deps.sarif
+  - reports/snyk-code.json
+  - reports/snyk-code.sarif
+2. Build logs print summarized High/Critical counts.
+3. Demo mode keeps scan visibility but does not block deploy on findings.
+
+## Cost Guidance
+
+EKS + worker nodes + LoadBalancer are the main cost drivers.
+
+Low-cost strategy:
+
+1. Run demo, capture proof, destroy the same day.
+2. Avoid leaving EKS running overnight.
+
+## Cleanup
+
+Use this order:
+
+```bash
+terraform -chdir=terraform/pipelines destroy -var 'aws_profile=<your-profile>' -auto-approve
+terraform -chdir=terraform/eks-cluster destroy -var 'aws_profile=<your-profile>' -auto-approve
+```
+
+Then verify in AWS:
+
+1. No EKS clusters.
+2. No CodePipeline pipelines.
+3. No pending/active unused connections.
+4. No orphan ELB/EBS resources.
+
+## Video Tutorial Script
+
+Use this as your narration script.
+
+### Intro (0:00-0:30)
+
+"In this project, I built a cloud-native DevSecOps pipeline on AWS. I use Terraform Cloud for infrastructure automation, GitHub Actions for orchestration, CodePipeline and CodeBuild for CI/CD, and Snyk and Trivy for security scanning, then deploy the app to EKS."
+
+### Architecture (0:30-1:00)
+
+"My GitHub workflow triggers Terraform Cloud runs for two workspaces: one for EKS and one for pipeline resources. The deployment pipeline then builds, scans, and deploys the application to Kubernetes."
+
+### Terraform Cloud + OIDC (1:00-1:40)
+
+"I configured AWS OIDC trust with Terraform Cloud so runs can assume an IAM role securely, without static long-lived cloud keys in CI."
+
+### Infra Provisioning (1:40-2:20)
+
+"Here is the GitHub Actions run. Both Terraform apply jobs succeeded: EKS infrastructure and pipeline infrastructure."
+
+### Connection Activation (2:20-2:45)
+
+"After provisioning, I manually activated the pending GitHub connection in CodePipeline settings by authorizing the AWS GitHub app."
+
+### Pipeline Execution (2:45-3:30)
+
+"I triggered the awsome-fastapi pipeline release. It ran source, build, tests, security scans, and deploy stages successfully."
+
+### Security Results (3:30-4:15)
+
+"Snyk and Trivy outputs are available in CodeBuild logs and artifacts. I also added JSON and SARIF exports plus summary counts for High and Critical findings."
+
+### Runtime Verification (4:15-5:00)
+
+"Using kubectl, I verified the deployment, service, and running pods. The service is exposed via a LoadBalancer endpoint, confirming successful deployment to EKS."
+
+### Cost & Cleanup (5:00-5:30)
+
+"Because EKS can be expensive for demos, I tear everything down after validation using Terraform destroy for pipelines first, then EKS."
+
+### Close (5:30-5:45)
+
+"This demonstrates practical DevSecOps skills across infrastructure as code, cloud security scanning, CI/CD automation, Kubernetes deployment, and cost-aware operations."
+
+## Portfolio Checklist
+
+1. Screenshot of Terraform Cloud successful runs.
+2. Screenshot of CodePipeline success.
+3. Screenshot of scan logs/artifacts.
+4. Screenshot of kubectl output with running pods and service.
+5. Screenshot of app endpoint response.
+6. Screenshot of successful cleanup/no residual resources.
