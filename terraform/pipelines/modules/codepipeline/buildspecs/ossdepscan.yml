@@ -15,15 +15,25 @@ phases:
   build:
     commands:
       - echo "Scanning container for vulnerabilities with Trivy..."
+      - mkdir -p reports
       # Fail the build on HIGH and CRITICAL vulnerabilities
       #- ./bin/trivy image --severity HIGH,CRITICAL --exit-code 1 $IMAGE_REPO_NAME:latest
-      - ./bin/trivy image --severity HIGH,CRITICAL --exit-code 0 $IMAGE_REPO_NAME:latest
+      - ./bin/trivy image --severity HIGH,CRITICAL --format json --output reports/trivy-image.json --exit-code 0 $IMAGE_REPO_NAME:latest
+      - ./bin/trivy image --severity HIGH,CRITICAL --exit-code 0 $IMAGE_REPO_NAME:latest > reports/trivy-image.txt
   post_build:
     commands:
+      - |
+        if [ -n "${SECURITY_REPORTS_BUCKET}" ]; then
+          REPORT_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
+          REPORT_PREFIX="security-reports/${CODEBUILD_BUILD_ID}/trivy"
+          echo "Uploading Trivy reports to s3://${SECURITY_REPORTS_BUCKET}/${REPORT_PREFIX}/"
+          aws s3 cp reports/ "s3://${SECURITY_REPORTS_BUCKET}/${REPORT_PREFIX}/" --recursive --region "${REPORT_REGION}"
+        else
+          echo "SECURITY_REPORTS_BUCKET not set; skipping persistent report upload."
+        fi
       - echo "Container Scanning completed."
 
 artifacts:
   files:
-    - "**/*"
-  discard-paths: yes
-  
+    - reports/**/*
+  discard-paths: no

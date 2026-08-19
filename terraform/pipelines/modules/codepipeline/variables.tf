@@ -82,3 +82,15 @@ variable "eks_cluster_arn" {
   description = "EKS cluster name"
   type        = string
 }
+
+variable "security_reports_bucket_name" {
+  description = "Optional long-lived S3 bucket name for persistent security reports"
+  type        = string
+  default     = ""
+}
+
+variable "security_reports_bucket_arn" {
+  description = "Optional ARN for persistent security reports bucket"
+  type        = string
+  default     = ""
+}

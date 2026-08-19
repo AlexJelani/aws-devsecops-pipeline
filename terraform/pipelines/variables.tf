@@ -48,3 +48,15 @@ variable "github_username" {
   description = "GitHub username or organization that owns the awsome-fastapi repository"
   default     = "AlexJelani"
 }
+
+variable "security_reports_bucket_name" {
+  type        = string
+  description = "Optional long-lived S3 bucket name for security reports. Leave empty to disable persistent report uploads."
+  default     = ""
+}
+
+variable "security_reports_bucket_arn" {
+  type        = string
+  description = "Optional ARN for the long-lived security reports bucket. If empty and bucket name is set, ARN is derived automatically."
+  default     = ""
+}

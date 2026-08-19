@@ -70,6 +70,15 @@ phases:
 
         print(f"Snyk severity summary: high={total['high']}, critical={total['critical']}")
         PY
+      - |
+        if [ -n "${SECURITY_REPORTS_BUCKET}" ]; then
+          REPORT_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
+          REPORT_PREFIX="security-reports/${CODEBUILD_BUILD_ID}/snyk"
+          echo "Uploading Snyk reports to s3://${SECURITY_REPORTS_BUCKET}/${REPORT_PREFIX}/"
+          aws s3 cp reports/ "s3://${SECURITY_REPORTS_BUCKET}/${REPORT_PREFIX}/" --recursive --region "${REPORT_REGION}"
+        else
+          echo "SECURITY_REPORTS_BUCKET not set; skipping persistent report upload."
+        fi
       - echo "Snyk scanning completed."
 
 artifacts:

@@ -16,6 +16,20 @@ resource "aws_iam_role" "pipeline_role" {
   })
 }
 
+locals {
+  security_reports_bucket_arn_effective = var.security_reports_bucket_arn != "" ? var.security_reports_bucket_arn : (var.security_reports_bucket_name != "" ? "arn:aws:s3:::${var.security_reports_bucket_name}" : "")
+  codebuild_s3_resources = concat(
+    [
+      var.s3_bucket_arn,
+      "${var.s3_bucket_arn}/*"
+    ],
+    local.security_reports_bucket_arn_effective != "" ? [
+      local.security_reports_bucket_arn_effective,
+      "${local.security_reports_bucket_arn_effective}/*"
+    ] : []
+  )
+}
+
 resource "aws_iam_policy" "pipeline_policy" {
   name        = "${var.repo_name}-role-policy"
   description = "IAM policy for CodePipeline"
@@ -148,10 +162,7 @@ resource "aws_iam_policy" "codebuild_policy" {
           "s3:PutObject",
           "s3:ListBucket"
         ]
-        Resource = [
-          "${var.s3_bucket_arn}",
-          "${var.s3_bucket_arn}/*"
-        ]
+        Resource = local.codebuild_s3_resources
       },
       {
         Effect = "Allow"
@@ -287,14 +298,14 @@ resource "aws_codepipeline" "pipeline" {
     }
 
     action {
-      name            = "SnykSecurityScan"
-      category        = "Test"
-      owner           = "AWS"
-      provider        = "CodeBuild"
-      version         = "1"
-      input_artifacts = ["SourceArtifact"]
+      name             = "SnykSecurityScan"
+      category         = "Test"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["SourceArtifact"]
       output_artifacts = ["SnykScanArtifact"]
-      run_order       = 3
+      run_order        = 3
 
       configuration = {
         ProjectName = aws_codebuild_project.static_analysis_project.name
@@ -506,6 +517,11 @@ resource "aws_codebuild_project" "static_analysis_project" {
       value = aws_ssm_parameter.snyk_org_id.name
       type  = "PARAMETER_STORE"
     }
+
+    environment_variable {
+      name  = "SECURITY_REPORTS_BUCKET"
+      value = var.security_reports_bucket_name
+    }
   }
 
   source {
@@ -533,6 +549,11 @@ resource "aws_codebuild_project" "oss_scanning_project" {
     environment_variable {
       name  = "IMAGE_REPO_NAME"
       value = aws_ecr_repository.this.name
+    }
+
+    environment_variable {
+      name  = "SECURITY_REPORTS_BUCKET"
+      value = var.security_reports_bucket_name
     }
   }
 

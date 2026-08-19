@@ -57,6 +57,9 @@ module "awsome_fastapi_pipeline" {
   buildspec_path  = file("./buildspecs/awsome-fastapi/build.yml")
   deployspec_path = file("./buildspecs/awsome-fastapi/deploy.yml")
 
+  security_reports_bucket_name = var.security_reports_bucket_name
+  security_reports_bucket_arn  = var.security_reports_bucket_arn
+
   snyk_org_id = var.SNYK_ORG_ID
   snyk_token  = var.SNYK_TOKEN
 }
