@@ -31,7 +31,7 @@ variable "aws_secret_access_key" {
 variable "aws_profile" {
   type        = string
   description = "AWS shared config profile name for Terraform Cloud runs"
-  default     = ""
+  default     = "iamprodadmin"
 }
 
 variable "SNYK_TOKEN" {}
