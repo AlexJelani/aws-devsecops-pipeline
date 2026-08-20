@@ -32,15 +32,16 @@ This project automates:
 
 ```mermaid
 flowchart LR
-  A[GitHub Repo] --> B[GitHub Actions workflow_dispatch]
-  B --> C[Terraform Cloud EKS Workspace]
-  B --> D[Terraform Cloud Pipelines Workspace]
-  D --> E[CodePipeline awsome-fastapi]
-  E --> F[CodeBuild Build/Test/Scan]
-  F --> G[Snyk + Trivy Results]
-  E --> H[Deploy Stage]
-  H --> I[EKS Cluster]
-  I --> J[LoadBalancer Service]
+  A[Terraform Cloud EKS Workspace] --> B[EKS Cluster and Node Group]
+  B --> C[Terraform Cloud Pipelines Workspace]
+  C --> D[CodePipeline awsome-fastapi]
+  E[GitHub App Repository main] --> D
+  D --> F[CodeBuild Build]
+  F --> G[Tests: Format, Lint, Unit]
+  G --> H[Snyk and Trivy Scans]
+  H --> I[CodeBuild Deploy]
+  I --> B
+  B --> J[LoadBalancer Service]
 ```
 
 ## Prerequisites
@@ -160,63 +161,46 @@ Low-cost strategy:
 
 ## Cleanup
 
-Use this order:
+Destroy infrastructure in dependency order. In Terraform Cloud, open each workspace and select **Settings** -> **Destruction and deletion** -> **Queue destroy plan**. Review the destroy plan, then confirm the apply.
+
+1. Destroy the `dsb-aws-devsecops-pipelines` workspace first. This removes the CodePipeline, CodeBuild projects, ECR repository, artifact bucket, pipeline IAM resources, and EKS access configuration.
+2. While the EKS cluster still exists, delete the application resources. The Kubernetes Deployment and LoadBalancer Service are created by CodeBuild, not owned by the EKS Terraform workspace.
 
 ```bash
-terraform -chdir=terraform/pipelines destroy -var 'aws_profile=<your-profile>' -auto-approve
-terraform -chdir=terraform/eks-cluster destroy -var 'aws_profile=<your-profile>' -auto-approve
+aws eks update-kubeconfig \
+  --name dsb-devsecops-cluster \
+  --region us-east-1 \
+  --profile <your-profile>
+
+kubectl delete service awsome-fastapi
+kubectl delete deployment awsome-fastapi
 ```
+
+3. Wait for the application's Classic LoadBalancer to disappear from **EC2** -> **Load Balancers**.
+4. Destroy the `dsb-aws-devsecops-eks-cluster` workspace second.
 
 Then verify in AWS:
 
 1. No EKS clusters.
 2. No CodePipeline pipelines.
-3. No pending/active unused connections.
-4. No orphan ELB/EBS resources.
+3. No application load balancers or node-group EC2 instances.
+4. No orphaned ELB or EBS resources.
 
-## Video Tutorial Script
+### Delete Terraform Cloud Workspaces
 
-Use this as your narration script.
+Destroying infrastructure and deleting a Terraform Cloud workspace are separate actions. Deleting a workspace permanently removes its variables, settings, run history, and Terraform state.
 
-### Intro (0:00-0:30)
+Only delete `dsb-aws-devsecops-pipelines` and `dsb-aws-devsecops-eks-cluster` after their respective destroy runs succeed and only when you do not intend to rebuild the environment. To rebuild later, retain both workspaces, their variables, the Terraform Cloud OIDC IAM roles, and the `app.terraform.io` IAM identity provider.
 
-"In this project, I built a cloud-native DevSecOps pipeline on AWS. I use Terraform Cloud for infrastructure automation, GitHub Actions for orchestration, CodePipeline and CodeBuild for CI/CD, and Snyk and Trivy for security scanning, then deploy the app to EKS."
+If the project is permanently retired, remove manually created resources last:
 
-### Architecture (0:30-1:00)
+1. Terraform Cloud IAM roles.
+2. The GitHub CodeStar connection, if it remains.
+3. The `app.terraform.io` IAM identity provider.
 
-"My GitHub workflow triggers Terraform Cloud runs for two workspaces: one for EKS and one for pipeline resources. The deployment pipeline then builds, scans, and deploys the application to Kubernetes."
+## Video Tutorial
 
-### Terraform Cloud + OIDC (1:00-1:40)
-
-"I configured AWS OIDC trust with Terraform Cloud so runs can assume an IAM role securely, without static long-lived cloud keys in CI."
-
-### Infra Provisioning (1:40-2:20)
-
-"Here is the GitHub Actions run. Both Terraform apply jobs succeeded: EKS infrastructure and pipeline infrastructure."
-
-### Connection Activation (2:20-2:45)
-
-"After provisioning, I manually activated the pending GitHub connection in CodePipeline settings by authorizing the AWS GitHub app."
-
-### Pipeline Execution (2:45-3:30)
-
-"I triggered the awsome-fastapi pipeline release. It ran source, build, tests, security scans, and deploy stages successfully."
-
-### Security Results (3:30-4:15)
-
-"Snyk and Trivy outputs are available in CodeBuild logs and artifacts. I also added JSON and SARIF exports plus summary counts for High and Critical findings."
-
-### Runtime Verification (4:15-5:00)
-
-"Using kubectl, I verified the deployment, service, and running pods. The service is exposed via a LoadBalancer endpoint, confirming successful deployment to EKS."
-
-### Cost & Cleanup (5:00-5:30)
-
-"Because EKS can be expensive for demos, I tear everything down after validation using Terraform destroy for pipelines first, then EKS."
-
-### Close (5:30-5:45)
-
-"This demonstrates practical DevSecOps skills across infrastructure as code, cloud security scanning, CI/CD automation, Kubernetes deployment, and cost-aware operations."
+The narration, recording flow, screenshots to capture, and recording-safety guidance are maintained separately in [VIDEO_TUTORIAL_SCRIPT.md](VIDEO_TUTORIAL_SCRIPT.md).
 
 ## Portfolio Checklist
 
