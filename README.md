@@ -44,6 +44,45 @@ flowchart LR
   B --> J[LoadBalancer Service]
 ```
 
+## AWS Infrastructure Diagram
+
+```mermaid
+flowchart TB
+  subgraph AWS["AWS Account (us-east-1)"]
+    subgraph VPC["Default VPC"]
+      SubnetA["Default Subnet us-east-1a"]
+      SubnetB["Default Subnet us-east-1b"]
+
+      subgraph EKS["EKS Cluster: dsb-devsecops-cluster"]
+        CP["EKS Control Plane"]
+        NG["Managed Node Group\n(t3.medium, 2 desired)"]
+        Pod1["Pod: awsome-fastapi"]
+        Pod2["Pod: awsome-fastapi"]
+      end
+
+      CLB["Classic LoadBalancer\n(Internet-facing)"]
+    end
+
+    ECR["ECR Repository"]
+    S3["S3 Artifact Bucket"]
+    ClusterRole["IAM Role: eks-cluster-role"]
+    NodeRole["IAM Role: eks-node-role"]
+  end
+
+  Internet["Client / Browser"] --> CLB
+  CLB --> NG
+  NG --> Pod1
+  NG --> Pod2
+  NG -.-> SubnetA
+  NG -.-> SubnetB
+  CP -.-> SubnetA
+  CP -.-> SubnetB
+  CP -. assumes .-> ClusterRole
+  NG -. assumes .-> NodeRole
+  NG -. pulls image .-> ECR
+  CP -. deployment artifacts .-> S3
+```
+
 ## Prerequisites
 
 1. AWS account with IAM permissions for IAM, EKS, CodePipeline, CodeBuild, S3, ELB.
