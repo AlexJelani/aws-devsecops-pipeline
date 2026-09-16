@@ -1,0 +1,127 @@
+# values.yaml — kube-prometheus-stack (Helm chart: prometheus-community/kube-prometheus-stack)
+#
+# Sensible defaults for a small single-cluster EKS deployment (dsb-devsecops-cluster).
+# Applied via monitoring/install-monitoring.sh. Keep this file the single source of
+# truth for the monitoring stack's Helm configuration; do not manage it via Terraform.
+
+# ---------------------------------------------------------------------------
+# Prometheus
+# ---------------------------------------------------------------------------
+prometheus:
+  prometheusSpec:
+    # Keep only 7 days of metrics on cluster to control EBS cost for a demo/portfolio workload.
+    retention: 7d
+    retentionSize: "8GB"
+
+    # Discover ServiceMonitors/PodMonitors/PrometheusRules across all namespaces so the
+    # app team's ServiceMonitor (monitoring/servicemonitor.yaml) is picked up automatically,
+    # regardless of chart release naming/label conventions.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+  # Expose Prometheus via a ClusterIP by default; use kubectl port-forward or an
+  # ingress/LoadBalancer if you want external access (not enabled here to avoid
+  # extra public LoadBalancer cost).
+  service:
+    type: ClusterIP
+
+# ---------------------------------------------------------------------------
+# Alertmanager
+# ---------------------------------------------------------------------------
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+  # The chart-managed Alertmanager config is overridden by
+  # monitoring/alerts/alertmanager-config.yaml (a Secret), applied separately by
+  # install-monitoring.sh, so routing/receivers live in one reviewable manifest.
+  config: {}
+
+# ---------------------------------------------------------------------------
+# Grafana
+# ---------------------------------------------------------------------------
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: true
+
+  persistence:
+    enabled: true
+    storageClassName: gp3
+    accessModes: ["ReadWriteOnce"]
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  service:
+    type: ClusterIP
+
+  # Grafana auto-discovers dashboards placed in this ConfigMap label/folder via the
+  # sidecar; the Golden Signals dashboard (monitoring/dashboards/golden-signals-dashboard.json)
+  # can be imported manually or loaded as a ConfigMap with this label:
+  #   kubectl -n monitoring create configmap golden-signals-dashboard \
+  #     --from-file=monitoring/dashboards/golden-signals-dashboard.json \
+  #     --dry-run=client -o yaml | kubectl label -f - --local -o yaml grafana_dashboard=1 | kubectl apply -f -
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+
+  # CHANGE ME before production use — placeholder admin credentials for demo purposes.
+  adminPassword: "CHANGE_ME_admin_password"
+
+# ---------------------------------------------------------------------------
+# kube-state-metrics / node-exporter
+# ---------------------------------------------------------------------------
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+# Disable components that require access to kubeadm-managed control-plane
+# components not available on managed EKS control planes.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false

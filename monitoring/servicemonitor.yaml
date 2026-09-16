@@ -1,0 +1,36 @@
+# servicemonitor.yaml
+#
+# Scrapes the awsome-fastapi application's /metrics endpoint for Prometheus,
+# installed by kube-prometheus-stack (see monitoring/install-monitoring.sh).
+#
+# NOTE: requires the app to expose Prometheus-format metrics on /metrics
+# (e.g. via prometheus-fastapi-instrumentator). See docs/SLO.md section 2.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: awsome-fastapi
+  namespace: monitoring
+  labels:
+    # Matches prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues: false
+    # in values.yaml, which scans all namespaces for ServiceMonitors.
+    release: kube-prometheus-stack
+spec:
+  # Select the awsome-fastapi Kubernetes Service, which lives in the "default"
+  # namespace (created by terraform/pipelines/buildspecs/awsome-fastapi/build.yml).
+  namespaceSelector:
+    matchNames:
+      - default
+  selector:
+    matchLabels:
+      app: awsome-fastapi
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      # Relabel the target's job name to match the "job" label used throughout
+      # docs/SLO.md and monitoring/alerts/prometheus-rules.yaml.
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: job
+          replacement: awsome-fastapi

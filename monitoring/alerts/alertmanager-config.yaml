@@ -1,0 +1,70 @@
+# alertmanager-config.yaml
+#
+# Alertmanager configuration for the kube-prometheus-stack release, routing
+# critical alerts to email. Applied as a Kubernetes Secret consumed by the
+# chart's Alertmanager (see values.yaml alertmanager.alertmanagerSpec).
+#
+# Replace all CHANGE_ME placeholders with real values via a secrets manager or
+# CI/CD variable substitution — do not commit real SMTP credentials.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-kube-prometheus-stack-alertmanager
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    global:
+      # Placeholder SMTP relay — replace with your provider (SES, SendGrid, etc.)
+      smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+      smtp_from: '${SMTP_FROM_ADDRESS}'
+      smtp_auth_username: '${SMTP_USERNAME}'
+      smtp_auth_password: '${SMTP_PASSWORD}'
+      smtp_require_tls: true
+
+    route:
+      # Default receiver for anything not matched below.
+      receiver: 'default-null'
+      group_by: ['alertname', 'service']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        # Fast-burn / critical alerts page immediately with short repeat interval.
+        - matcher:
+            - severity = "critical"
+          receiver: 'email-oncall-critical'
+          group_wait: 10s
+          repeat_interval: 1h
+          continue: false
+
+        # Slow-burn / warning alerts go to the team inbox, lower urgency.
+        - matcher:
+            - severity = "warning"
+          receiver: 'email-team-warning'
+          repeat_interval: 6h
+          continue: false
+
+    receivers:
+      - name: 'default-null'
+
+      - name: 'email-oncall-critical'
+        email_configs:
+          - to: '${ONCALL_EMAIL}'
+            send_resolved: true
+
+      - name: 'email-team-warning'
+        email_configs:
+          - to: '${TEAM_EMAIL}'
+            send_resolved: true
+
+    inhibit_rules:
+      # Suppress the warning-level HighErrorRate alert while the critical one
+      # for the same service is firing, to avoid duplicate noise.
+      - source_matcher:
+          - severity = "critical"
+        target_matcher:
+          - severity = "warning"
+        equal: ['alertname', 'service']

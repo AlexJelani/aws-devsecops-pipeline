@@ -237,6 +237,19 @@ If the project is permanently retired, remove manually created resources last:
 2. The GitHub CodeStar connection, if it remains.
 3. The `app.terraform.io` IAM identity provider.
 
+## SRE Practice
+
+This project extends the DevSecOps pipeline with baseline SRE practices for the `awsome-fastapi` service running on EKS.
+
+1. **SLOs and error budget policy:** [docs/SLO.md](docs/SLO.md) defines the availability (99.9%) and latency (p95 < 500ms) objectives, the 43.2-minute monthly error budget, burn-rate alert thresholds, and the deploy-freeze policy once >50% of the budget is consumed.
+2. **Monitoring stack:** [monitoring/](monitoring/) contains a Helm-based `kube-prometheus-stack` install (`install-monitoring.sh` + `values.yaml`) and the `ServiceMonitor` that scrapes the app's `/metrics` endpoint. Kept as Helm/Kubernetes manifests, not Terraform, since the cluster's infrastructure is already managed by Terraform Cloud.
+3. **Alerting:** [monitoring/alerts/](monitoring/alerts/) defines `PrometheusRule` alerts (`HighErrorRate`, `PodCrashLooping`, `HighLatency`, `NodePressure`) and an Alertmanager config routing critical alerts to email.
+4. **Runbook:** [docs/RUNBOOK.md](docs/RUNBOOK.md) documents symptoms, likely causes, investigation commands, and mitigation/rollback steps (including `kubectl rollout undo` and pipeline-revert instructions) for every alert.
+5. **Load testing:** [loadtest/loadtest.js](loadtest/loadtest.js) is a k6 script that ramps traffic from 0 to 800 RPS with thresholds tied to the SLOs. Observed results are recorded in [docs/LOADTEST-RESULTS.md](docs/LOADTEST-RESULTS.md).
+6. **Golden Signals dashboard:** [monitoring/dashboards/golden-signals-dashboard.json](monitoring/dashboards/golden-signals-dashboard.json) is a Grafana dashboard covering latency, traffic, errors, saturation, and an SLO compliance gauge.
+
+**Dashboard screenshots:** _placeholder — add a screenshot of the Golden Signals dashboard here once the monitoring stack is deployed and has collected data._
+
 ## Video Tutorial
 
 The narration, recording flow, screenshots to capture, and recording-safety guidance are maintained separately in [VIDEO_TUTORIAL_SCRIPT.md](VIDEO_TUTORIAL_SCRIPT.md).

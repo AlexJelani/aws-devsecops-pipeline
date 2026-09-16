@@ -1,0 +1,121 @@
+# prometheus-rules.yaml
+#
+# PrometheusRule for the awsome-fastapi service and its underlying nodes.
+# Applied by monitoring/install-monitoring.sh after kube-prometheus-stack is installed.
+#
+# Thresholds implement the burn-rate policy documented in docs/SLO.md section 4.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: awsome-fastapi-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    # -------------------------------------------------------------------
+    # Availability (HTTP 5xx rate) — burn-rate alerting per docs/SLO.md
+    # -------------------------------------------------------------------
+    - name: awsome-fastapi.availability
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job="awsome-fastapi",code=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{job="awsome-fastapi"}[5m]))
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: warning
+            service: awsome-fastapi
+          annotations:
+            summary: "awsome-fastapi 5xx rate above 1% (slow burn)"
+            description: >-
+              5xx error rate has been above 1% for 5 minutes. This corresponds to the
+              slow-burn threshold in docs/SLO.md (5% of monthly error budget in 6h).
+              Current value: {{ $value | humanizePercentage }}.
+            runbook_url: "docs/RUNBOOK.md#highrateratehigherrorrate"
+
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job="awsome-fastapi",code=~"5.."}[2m]))
+              /
+              sum(rate(http_requests_total{job="awsome-fastapi"}[2m]))
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            service: awsome-fastapi
+          annotations:
+            summary: "awsome-fastapi 5xx rate above 5% (fast burn)"
+            description: >-
+              5xx error rate has been above 5% for 2 minutes. This corresponds to the
+              fast-burn threshold in docs/SLO.md (2% of monthly error budget in 1h) and
+              should page on-call immediately.
+              Current value: {{ $value | humanizePercentage }}.
+            runbook_url: "docs/RUNBOOK.md#highrateratehigherrorrate"
+
+    # -------------------------------------------------------------------
+    # Latency (p95)
+    # -------------------------------------------------------------------
+    - name: awsome-fastapi.latency
+      rules:
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_request_duration_seconds_bucket{job="awsome-fastapi"}[5m])) by (le)
+            ) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            service: awsome-fastapi
+          annotations:
+            summary: "awsome-fastapi p95 latency above 500ms"
+            description: >-
+              p95 request latency has been above the 500ms SLO threshold
+              (docs/SLO.md section 3) for 10 minutes.
+              Current p95: {{ $value }}s.
+            runbook_url: "docs/RUNBOOK.md#highlatency"
+
+    # -------------------------------------------------------------------
+    # Pod health
+    # -------------------------------------------------------------------
+    - name: awsome-fastapi.pods
+      rules:
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="default",pod=~"awsome-fastapi.*"}[15m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+            service: awsome-fastapi
+          annotations:
+            summary: "awsome-fastapi pod restarting repeatedly"
+            description: >-
+              Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted
+              more than 3 times in the last 15 minutes.
+            runbook_url: "docs/RUNBOOK.md#podcrashlooping"
+
+    # -------------------------------------------------------------------
+    # Node saturation
+    # -------------------------------------------------------------------
+    - name: awsome-fastapi.nodes
+      rules:
+        - alert: NodePressure
+          expr: |
+            (
+              1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+            ) * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+            service: awsome-fastapi
+          annotations:
+            summary: "Node {{ $labels.instance }} memory usage above 85%"
+            description: >-
+              Node {{ $labels.instance }} has used more than 85% of memory for 10
+              minutes, risking pod evictions on the EKS managed node group.
+            runbook_url: "docs/RUNBOOK.md#nodepressure"
