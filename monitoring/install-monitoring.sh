@@ -39,8 +39,15 @@ helm repo update "${CHART_REPO_NAME}"
 echo "==> Ensuring namespace '${NAMESPACE}' exists"
 kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${NAMESPACE}"
 
-echo "==> Applying Grafana Cloud remote_write token Secret (placeholder unless overridden)"
-kubectl apply -f "$(dirname "$0")/remote-write-secret.yaml"
+# Real credentials go in a gitignored monitoring/remote-write-secret.local.yaml
+# (see .gitignore "monitoring/*.local.yaml"); the committed *.yaml only has
+# placeholders, so it's used as a fallback when no local override exists.
+REMOTE_WRITE_SECRET_FILE="$(dirname "$0")/remote-write-secret.yaml"
+if [[ -f "$(dirname "$0")/remote-write-secret.local.yaml" ]]; then
+  REMOTE_WRITE_SECRET_FILE="$(dirname "$0")/remote-write-secret.local.yaml"
+fi
+echo "==> Applying Grafana Cloud remote_write credentials Secret (${REMOTE_WRITE_SECRET_FILE})"
+kubectl apply -f "${REMOTE_WRITE_SECRET_FILE}"
 
 echo "==> Installing/upgrading ${RELEASE_NAME} in namespace ${NAMESPACE}"
 HELM_VERSION_ARG=()

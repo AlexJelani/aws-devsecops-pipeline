@@ -39,16 +39,20 @@ prometheus:
 
     # Ship a filtered subset of metrics to Grafana Cloud for off-cluster
     # long-term storage/alerting, so the 30-day SLO history in docs/SLO.md
-    # survives past the 7-day local retention above. The bearer token is
-    # supplied via the "grafana-cloud-remote-write" Secret created by
-    # remote-write-secret.yaml — replace its placeholder value before use.
+    # survives past the 7-day local retention above. Grafana Cloud remote_write
+    # authenticates via HTTP Basic Auth (username = Instance ID, password = an
+    # Access Policy token) sourced from the "grafana-cloud-remote-write" Secret
+    # created by remote-write-secret.yaml — never hardcode real credentials here.
     remoteWrite:
-      - url: "https://prometheus-prod-XX-prod-us-central-0.grafana.net/api/prom/push" # CHANGE ME: your Grafana Cloud Prometheus endpoint
+      - url: "https://prometheus-prod-49-prod-ap-northeast-0.grafana.net/api/prom/push" # your stack's Grafana Cloud Prometheus push endpoint
         name: grafana-cloud
-        authorization:
-          credentials:
+        basicAuth:
+          username:
             name: grafana-cloud-remote-write
-            key: api-token
+            key: username
+          password:
+            name: grafana-cloud-remote-write
+            key: password
         # Keep only app (awsome-fastapi) and alerting-rule metrics to stay
         # within Grafana Cloud's free-tier active-series limits. Everything
         # else (cAdvisor, kube-state-metrics churn, etc.) stays local only.

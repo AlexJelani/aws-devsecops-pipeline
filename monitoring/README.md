@@ -87,19 +87,29 @@ The Grafana sidecar picks up any ConfigMap labeled `grafana_dashboard=1` across 
 
 ## 5. Enable Grafana Cloud remote_write (optional, off-cluster long-term storage)
 
-1. Create/sign in to a Grafana Cloud stack and copy its Prometheus remote_write endpoint URL and API token from **Connections -> Data sources -> Prometheus** (or **My Account -> API Keys**).
-2. Set the real token in the Secret instead of the placeholder:
-   ```bash
-   kubectl -n monitoring create secret generic grafana-cloud-remote-write \
-     --from-literal=api-token="<your-grafana-cloud-api-token>" \
-     --dry-run=client -o yaml | kubectl apply -f -
-   ```
-3. Update the placeholder endpoint in [`values.yaml`](values.yaml) under `prometheus.prometheusSpec.remoteWrite[0].url` to your stack's real push URL.
-4. Re-apply the Helm release so Prometheus picks up the new remote_write config:
+1. In your Grafana Cloud stack, go to **Connections -> Add new connection -> Hosted Prometheus metrics** and choose:
+   - **From my local Prometheus server** (not Alloy — we already run our own collector via `kube-prometheus-stack`)
+   - **Send metrics from a single Prometheus instance**
+   - **Directly** (not via Alloy)
+   - Generate an Access Policy token (this is a one-time-shown secret — copy it immediately). This page also shows your **remote_write URL** and **Instance ID (username)**.
+2. Grafana Cloud remote_write authenticates via **HTTP Basic Auth**, not a bearer token: username = Instance ID, password = the Access Policy token you just generated.
+3. Create the real Secret with those two values. **Never commit real credentials** — use one of these two options, both of which keep the token out of git:
+   - **Option A — local gitignored file (recommended for iterating locally):** copy [`remote-write-secret.yaml`](remote-write-secret.yaml) to `monitoring/remote-write-secret.local.yaml` (already covered by the `monitoring/*.local.yaml` rule in [`.gitignore`](../.gitignore)), fill in the real `username`/`password`, then run `./monitoring/install-monitoring.sh` — it automatically prefers the `.local.yaml` file over the committed placeholder if present.
+   - **Option B — imperative kubectl command (no file at all):**
+     ```bash
+     kubectl -n monitoring create secret generic grafana-cloud-remote-write \
+       --from-literal=username="<your-instance-id>" \
+       --from-literal=password="<your-access-policy-token>" \
+       --dry-run=client -o yaml | kubectl apply -f -
+     ```
+4. Update the placeholder endpoint in [`values.yaml`](values.yaml) under `prometheus.prometheusSpec.remoteWrite[0].url` to your stack's real push URL (already using `basicAuth` sourced from the Secret above).
+5. Re-apply the Helm release so Prometheus picks up the new remote_write config:
    ```bash
    ./monitoring/install-monitoring.sh
    ```
-5. Confirm data is arriving in Grafana Cloud: **Explore** in your Grafana Cloud instance, query `http_requests_total` or `ALERTS`, and confirm series appear labeled `job="awsome-fastapi"`.
+6. Confirm data is arriving in Grafana Cloud: **Explore** in your Grafana Cloud instance, query `http_requests_total` or `ALERTS`, and confirm series appear labeled `job="awsome-fastapi"`.
+
+If a token is ever accidentally exposed (e.g. pasted into a chat, ticket, or committed to git), revoke it immediately in **Grafana Cloud -> My Account -> Access Policies -> Tokens** and generate a replacement.
 
 The `writeRelabelConfigs` in `values.yaml` intentionally keep only `http_*` app metrics and `ALERTS`/`ALERTS_FOR_STATE` series so usage stays within Grafana Cloud's free-tier active-series limits — everything else (cAdvisor, kube-state-metrics, node-exporter churn) stays local-only in the 7-day in-cluster Prometheus.
 

@@ -42,3 +42,7 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Local monitoring secrets — real Grafana Cloud credentials must never be committed.
+# Copy monitoring/remote-write-secret.yaml to *.local.yaml and fill in real values.
+monitoring/*.local.yaml
