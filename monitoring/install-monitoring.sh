@@ -39,6 +39,9 @@ helm repo update "${CHART_REPO_NAME}"
 echo "==> Ensuring namespace '${NAMESPACE}' exists"
 kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${NAMESPACE}"
 
+echo "==> Applying Grafana Cloud remote_write token Secret (placeholder unless overridden)"
+kubectl apply -f "$(dirname "$0")/remote-write-secret.yaml"
+
 echo "==> Installing/upgrading ${RELEASE_NAME} in namespace ${NAMESPACE}"
 HELM_VERSION_ARG=()
 if [[ -n "${CHART_VERSION}" ]]; then

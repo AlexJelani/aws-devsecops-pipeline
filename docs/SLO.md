@@ -84,6 +84,7 @@ Freeze/unfreeze decisions are made by the service owner and recorded in the team
 
 - Error budget burn and SLO compliance are visualized on the **Golden Signals** Grafana dashboard ([`monitoring/dashboards/golden-signals-dashboard.json`](../monitoring/dashboards/golden-signals-dashboard.json)), including an SLO compliance gauge.
 - Burn-rate alerts notify via Alertmanager email routing (see [`monitoring/alerts/alertmanager-config.yaml`](../monitoring/alerts/alertmanager-config.yaml)).
+- App and alert metrics are additionally shipped off-cluster to Grafana Cloud via `remote_write` (see [`monitoring/values.yaml`](../monitoring/values.yaml) and [`monitoring/remote-write-secret.yaml`](../monitoring/remote-write-secret.yaml)) so 30-day SLO history survives past the 7-day local Prometheus retention.
 - Incident response steps for each alert are documented in [`docs/RUNBOOK.md`](RUNBOOK.md).
 
 ## 7. Out of scope

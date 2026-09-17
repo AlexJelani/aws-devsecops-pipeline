@@ -37,6 +37,32 @@ prometheus:
             requests:
               storage: 20Gi
 
+    # Ship a filtered subset of metrics to Grafana Cloud for off-cluster
+    # long-term storage/alerting, so the 30-day SLO history in docs/SLO.md
+    # survives past the 7-day local retention above. The bearer token is
+    # supplied via the "grafana-cloud-remote-write" Secret created by
+    # remote-write-secret.yaml — replace its placeholder value before use.
+    remoteWrite:
+      - url: "https://prometheus-prod-XX-prod-us-central-0.grafana.net/api/prom/push" # CHANGE ME: your Grafana Cloud Prometheus endpoint
+        name: grafana-cloud
+        authorization:
+          credentials:
+            name: grafana-cloud-remote-write
+            key: api-token
+        # Keep only app (awsome-fastapi) and alerting-rule metrics to stay
+        # within Grafana Cloud's free-tier active-series limits. Everything
+        # else (cAdvisor, kube-state-metrics churn, etc.) stays local only.
+        # (http_* metrics are already scoped to job="awsome-fastapi" by the
+        # ServiceMonitor's relabeling, so a single name-based keep suffices.)
+        writeRelabelConfigs:
+          - sourceLabels: [__name__]
+            regex: "(http_requests_total|http_request_duration_seconds_bucket|http_request_duration_seconds_sum|http_request_duration_seconds_count|ALERTS|ALERTS_FOR_STATE)"
+            action: keep
+        queueConfig:
+          maxSamplesPerSend: 1000
+          capacity: 2500
+          maxShards: 10
+
   # Expose Prometheus via a ClusterIP by default; use kubectl port-forward or an
   # ingress/LoadBalancer if you want external access (not enabled here to avoid
   # extra public LoadBalancer cost).
