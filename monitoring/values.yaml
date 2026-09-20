@@ -56,11 +56,12 @@ prometheus:
         # Keep only app (awsome-fastapi) and alerting-rule metrics to stay
         # within Grafana Cloud's free-tier active-series limits. Everything
         # else (cAdvisor, kube-state-metrics churn, etc.) stays local only.
-        # (http_* metrics are already scoped to job="awsome-fastapi" by the
-        # ServiceMonitor's relabeling, so a single name-based keep suffices.)
+        # The app exposes plain prometheus_client metrics (python_*/process_*)
+        # plus optional HTTP instrumentator metrics; "up" is kept so target
+        # health is visible in Grafana Cloud as well.
         writeRelabelConfigs:
           - sourceLabels: [__name__]
-            regex: "(http_requests_total|http_request_duration_seconds_bucket|http_request_duration_seconds_sum|http_request_duration_seconds_count|ALERTS|ALERTS_FOR_STATE)"
+            regex: "(up|http_requests_total|http_request_duration_seconds_bucket|http_request_duration_seconds_sum|http_request_duration_seconds_count|python_.*|process_.*|ALERTS|ALERTS_FOR_STATE)"
             action: keep
         queueConfig:
           maxSamplesPerSend: 1000

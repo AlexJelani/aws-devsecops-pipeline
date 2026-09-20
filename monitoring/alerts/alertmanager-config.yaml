@@ -33,7 +33,7 @@ stringData:
       repeat_interval: 4h
       routes:
         # Fast-burn / critical alerts page immediately with short repeat interval.
-        - matcher:
+        - matchers:
             - severity = "critical"
           receiver: 'email-oncall-critical'
           group_wait: 10s
@@ -41,7 +41,7 @@ stringData:
           continue: false
 
         # Slow-burn / warning alerts go to the team inbox, lower urgency.
-        - matcher:
+        - matchers:
             - severity = "warning"
           receiver: 'email-team-warning'
           repeat_interval: 6h
@@ -63,8 +63,8 @@ stringData:
     inhibit_rules:
       # Suppress the warning-level HighErrorRate alert while the critical one
       # for the same service is firing, to avoid duplicate noise.
-      - source_matcher:
+      - source_matchers:
           - severity = "critical"
-        target_matcher:
+        target_matchers:
           - severity = "warning"
         equal: ['alertname', 'service']

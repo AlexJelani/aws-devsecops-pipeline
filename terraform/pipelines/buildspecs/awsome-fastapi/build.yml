@@ -68,11 +68,14 @@ phases:
         metadata:
           name: $IMAGE_REPO_NAME
           namespace: default
+          labels:
+            app: $IMAGE_REPO_NAME  # Required by the Prometheus ServiceMonitor selector
         spec:
           selector:
             app: $IMAGE_REPO_NAME  # Matches the labels in the Deployment
           ports:
-            - protocol: TCP
+            - name: http         # Required by the ServiceMonitor's endpoints[].port
+              protocol: TCP
               port: 80           # Port the service exposes to the outside
               targetPort: 80     # Port on the container
           type: LoadBalancer        # Use LoadBalancer to expose externally

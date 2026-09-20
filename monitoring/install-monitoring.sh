@@ -55,13 +55,15 @@ if [[ -n "${CHART_VERSION}" ]]; then
   HELM_VERSION_ARG=(--version "${CHART_VERSION}")
 fi
 
+# ${arr[@]+"${arr[@]}"} is the bash 3.2-safe way to expand a possibly-empty
+# array under set -u (macOS ships bash 3.2, which errors on "${arr[@]}").
 helm upgrade --install "${RELEASE_NAME}" "${CHART_NAME}" \
   --namespace "${NAMESPACE}" \
   --create-namespace \
   --values "${VALUES_FILE}" \
   --wait \
   --timeout 10m \
-  "${HELM_VERSION_ARG[@]}"
+  ${HELM_VERSION_ARG[@]+"${HELM_VERSION_ARG[@]}"}
 
 echo "==> Applying application ServiceMonitor"
 kubectl apply -f "$(dirname "$0")/servicemonitor.yaml"
