@@ -39,3 +39,15 @@ variable "alert_email" {
   description = "Email address for CloudWatch/SNS alerts"
   default     = ""
 }
+
+variable "cluster_name" {
+  type        = string
+  description = "Name of the EKS cluster"
+  default     = "dsb-devsecops-cluster"
+}
+
+variable "node_group_min_size" {
+  type        = number
+  description = "Minimum size of the EKS node group"
+  default     = 0
+}
