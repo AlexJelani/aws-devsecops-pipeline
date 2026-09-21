@@ -246,9 +246,6 @@ resource "aws_cloudwatch_log_metric_filter" "eks_control_plane_errors" {
     name      = "${var.resource_prefix}-eks-control-plane-error-count"
     namespace = "${var.resource_prefix}/EKS"
     value     = "1"
-    dimensions = {
-      ClusterName = var.cluster_name
-    }
   }
 }
 
@@ -262,8 +259,5 @@ resource "aws_cloudwatch_log_metric_filter" "eks_node_errors" {
     name      = "${var.resource_prefix}-eks-node-error-count"
     namespace = "${var.resource_prefix}/EKS"
     value     = "1"
-    dimensions = {
-      ClusterName = var.cluster_name
-    }
   }
 }
