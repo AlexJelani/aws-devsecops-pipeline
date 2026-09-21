@@ -27,3 +27,9 @@ variable "aws_profile" {
   description = "AWS shared config profile name for Terraform Cloud runs"
   default     = ""
 }
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}

@@ -27,7 +27,7 @@ variable "kubernetes_version" {
 variable "node_group_min_size" {
   description = "Minimum size of the node group"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "node_group_max_size" {
@@ -39,7 +39,7 @@ variable "node_group_max_size" {
 variable "node_group_desired_capacity" {
   description = "Desired size of the node group"
   type        = number
-  default     = 2
+  default     = 0
 }
 
 variable "instance_types" {
